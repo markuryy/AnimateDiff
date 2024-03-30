@@ -166,4 +166,3 @@ dependencies:
       - websockets==11.0.3
       - xformers==0.0.16
       - zipp==3.18.1
-prefix: C:\Users\mrcat\miniconda3\envs\animatediff
