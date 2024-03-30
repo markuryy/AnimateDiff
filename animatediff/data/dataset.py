@@ -8,8 +8,6 @@ import torchvision.transforms as transforms
 from torch.utils.data.dataset import Dataset
 from animatediff.utils.util import zero_rank_print
 
-
-
 class WebVid10M(Dataset):
     def __init__(
             self,
@@ -18,7 +16,7 @@ class WebVid10M(Dataset):
             is_image=False,
         ):
         zero_rank_print(f"loading annotations from {csv_path} ...")
-        with open(csv_path, 'r') as csvfile:
+        with open(csv_path, 'r', encoding='utf-8', errors='ignore') as csvfile:
             self.dataset = list(csv.DictReader(csvfile))
         self.length = len(self.dataset)
         zero_rank_print(f"data scale: {self.length}")
@@ -82,8 +80,8 @@ if __name__ == "__main__":
     from animatediff.utils.util import save_videos_grid
 
     dataset = WebVid10M(
-        csv_path="/mnt/petrelfs/guoyuwei/projects/datasets/webvid/results_2M_val.csv",
-        video_folder="/mnt/petrelfs/guoyuwei/projects/datasets/webvid/2M_val",
+        csv_path = "animatediff/data/webvidsx_dataset/dataset_metadata.csv",
+        video_folder = "animatediff/data/webvidsx_dataset/",
         sample_size=256,
         sample_stride=4, sample_n_frames=16,
         is_image=True,

@@ -1,7 +1,7 @@
 image_finetune: false
 
 output_dir: "outputs"
-pretrained_model_path: "models/StableDiffusion/stable-diffusion-v1-5"
+pretrained_model_path: "models/StableDiffusion/"
 
 unet_additional_kwargs:
   use_motion_module              : true
@@ -28,18 +28,18 @@ noise_scheduler_kwargs:
   clip_sample:         false
 
 train_data:
-  csv_path:        "/mnt/petrelfs/guoyuwei/projects/datasets/webvid/results_2M_val.csv"
-  video_folder:    "/mnt/petrelfs/guoyuwei/projects/datasets/webvid/2M_val"
+  csv_path:        "animatediff/data/webvidsx_dataset/dataset_metadata.csv"
+  video_folder:    "animatediff/data/webvidsx_dataset/"
   sample_size:     256
   sample_stride:   4
   sample_n_frames: 16
 
 validation_data:
   prompts:
-    - "Snow rocky mountains peaks canyon. Snow blanketed rocky mountains surround and shadow deep canyons."
-    - "A drone view of celebration with Christma tree and fireworks, starry sky - background."
-    - "Robot dancing in times square."
-    - "Pacific coast, carmel by the sea ocean and waves."
+    - "blowjob"
+    - "balls"
+    - "cock"
+    - "cumshot"
   num_inference_steps: 25
   guidance_scale: 8.
 
@@ -49,7 +49,7 @@ trainable_modules:
 unet_checkpoint_path: ""
 
 learning_rate:    1.e-4
-train_batch_size: 4
+train_batch_size: 2
 
 max_train_epoch:      -1
 max_train_steps:      100

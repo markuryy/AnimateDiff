@@ -1,3 +1,7 @@
+import warnings
+from diffusers.utils import logging as dl
+dl.set_verbosity_error()
+warnings.filterwarnings("ignore", message="A matching Triton is not available")
 import os
 import math
 import wandb
@@ -38,39 +42,17 @@ from animatediff.data.dataset import WebVid10M
 from animatediff.models.unet import UNet3DConditionModel
 from animatediff.pipelines.pipeline_animation import AnimationPipeline
 from animatediff.utils.util import save_videos_grid, zero_rank_print
+import warnings
 
 
 
 def init_dist(launcher="slurm", backend='nccl', port=29500, **kwargs):
-    """Initializes distributed environment."""
-    if launcher == 'pytorch':
-        rank = int(os.environ['RANK'])
-        num_gpus = torch.cuda.device_count()
-        local_rank = rank % num_gpus
-        torch.cuda.set_device(local_rank)
-        dist.init_process_group(backend=backend, **kwargs)
-        
-    elif launcher == 'slurm':
-        proc_id = int(os.environ['SLURM_PROCID'])
-        ntasks = int(os.environ['SLURM_NTASKS'])
-        node_list = os.environ['SLURM_NODELIST']
-        num_gpus = torch.cuda.device_count()
-        local_rank = proc_id % num_gpus
-        torch.cuda.set_device(local_rank)
-        addr = subprocess.getoutput(
-            f'scontrol show hostname {node_list} | head -n1')
-        os.environ['MASTER_ADDR'] = addr
-        os.environ['WORLD_SIZE'] = str(ntasks)
-        os.environ['RANK'] = str(proc_id)
-        port = os.environ.get('PORT', port)
-        os.environ['MASTER_PORT'] = str(port)
-        dist.init_process_group(backend=backend)
-        zero_rank_print(f"proc_id: {proc_id}; local_rank: {local_rank}; ntasks: {ntasks}; node_list: {node_list}; num_gpus: {num_gpus}; addr: {addr}; port: {port}")
-        
-    else:
-        raise NotImplementedError(f'Not implemented launcher type: `{launcher}`!')
-    
+    print("Non-distributed training mode activated.")
+    local_rank = 0
+    os.environ['LOCAL_RANK'] = str(local_rank)
+    torch.cuda.set_device(local_rank)
     return local_rank
+
 
 
 
@@ -105,7 +87,7 @@ def main(
     lr_scheduler: str = "constant",
 
     trainable_modules: Tuple[str] = (None, ),
-    num_workers: int = 32,
+    num_workers: int = 4,
     train_batch_size: int = 1,
     adam_beta1: float = 0.9,
     adam_beta2: float = 0.999,
@@ -126,10 +108,10 @@ def main(
     check_min_version("0.10.0.dev0")
 
     # Initialize distributed training
-    local_rank      = init_dist(launcher=launcher)
-    global_rank     = dist.get_rank()
-    num_processes   = dist.get_world_size()
-    is_main_process = global_rank == 0
+    local_rank = init_dist(launcher=launcher)
+    global_rank = 0
+    num_processes = 1
+    is_main_process = True  # Since there's only one process in non-distributed training
 
     seed = global_seed + global_rank
     torch.manual_seed(seed)
@@ -280,7 +262,7 @@ def main(
 
     # DDP warpper
     unet.to(local_rank)
-    unet = DDP(unet, device_ids=[local_rank], output_device=local_rank)
+    unet.to(local_rank)
 
     # We need to recalculate our total training steps as the size of the training dataloader may have changed.
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / gradient_accumulation_steps)
@@ -399,6 +381,13 @@ def main(
 
             lr_scheduler.step()
             progress_bar.update(1)
+            if global_step % 10 == 0:
+                logs = {"step_loss": loss.detach().item(), "learning_rate": lr_scheduler.get_last_lr()[0]}
+                progress_bar.set_postfix(**logs)
+
+            if is_main_process:
+                print(f"Step {global_step}/{max_train_steps} - Loss: {loss.item():.4f} - LR: {lr_scheduler.get_last_lr()[0]:.6f}")
+            
             global_step += 1
             
             ### <<<< Training <<<< ###
